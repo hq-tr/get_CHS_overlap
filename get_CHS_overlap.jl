@@ -1,13 +1,13 @@
 include("/home/trung/_qhe-julia/FQH_state_v2.jl")
 include("/home/trung/_qhe-julia/Potentials.jl")
 include("/home/trung/_qhe-julia/Misc.jl")
-include("/home/trung/two_body_potential/v1_sphere.jl")
+#include("/home/trung/two_body_potential/v1_sphere.jl")
 include("/home/trung/_qhe-julia/HilbertSpace.jl")
 
 using .FQH_states
 using .Potentials
 using .MiscRoutine
-using .PseudoPotential
+#using .PseudoPotential
 using Main.HilbertSpaceGenerator
 using LinearAlgebra
 using SparseArrays
@@ -28,18 +28,59 @@ function isadmissible(partition::BitVector, k::Integer, r::Integer)
     return check
 end
 
+function fileconfigure(filename,ask_confirm=true)
+    if isfile(filename)
+        if ask_confirm
+            println("File '$(filename)' exists.")
+            println("Configuring the script will permanently modify the code. Continue? (Y/N)")
+            doit = lowercase(readline()) in ["y","yes"]
+        else
+            doit = true
+        end
+        if doit
+            script_path = @__FILE__
+            code = read(script_path,String)
+
+            new_code = replace(code, "CONFIG_FILE_PATH = \"$(CONFIG_FILE_PATH)\"" => "CONFIG_FILE_PATH = \"$(filename)\"")
+            open(script_path,"w+") do f
+                write(f,new_code)
+            end
+            println("The script was configured successfully.")
+        else
+            println("The script was NOT configured.")
+        end
+    else
+        println("File '$(filename)' not found.")
+        println("The script was NOT configure")
+    end
+end
+
 function main()
     @inlinearguments begin
-        @argumentrequired String fname "-f" "--filename"
+        @argumentoptional String fname "-f" "--filename"
         @argumentoptional String bname "-b" "--basisname"
         @argumentoptional String rname "-r" "--rootname"
-        @argumentrequired Int Ne "--n_el" "-e"
-        @argumentrequired Int No "--n_orb" "-o"
+        @argumentoptional Int Ne "--n_el" "-e"
+        @argumentoptional Int No "--n_orb" "-o"
         @argumentoptional Int Lz "--L_z"
         @argumentoptional String appendfile "--append"
         @argumentoptional Float64 appendparam "--append-param"
-        @argumentrequired String fqhphase "--phase"
+        @argumentoptional String fqhphase "--phase"
         @argumentflag decimal_file "--decimal"
+        @argumentflag configure "--configure"
+        @argumentflag configure_default "--configure-default"
+    end
+
+    # Configure only
+    if configure
+        println("Specify the configuration file name below. (The default name is 'CHS.config'.)")
+        fileconfigure(readline())
+        return
+    end
+
+    if configure_default
+        fileconfigure("CHS.config",false)
+        return
     end
 
     # Read wavefunction
